@@ -1,0 +1,49 @@
+name: Express.js Test
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: 14
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Start Express.js server
+      run: npm start > server.log 2>&1 &
+
+    - name: Wait for server to start
+      run: |
+        n=0
+        until [ $n -ge 120 ]; do
+          curl -s http://localhost:4000 && break
+          n=$[$n+1]
+          sleep 1
+        done
+        if [ $n -ge 120 ]; then
+          echo "Server did not start in time."
+          cat server.log
+          exit 1
+        fi
+
+    - name: Test Express.js response
+      run: |
+        response=$(curl -s http://localhost:4000)
+        if [[ "$response" == "hello world" ]]; then
+          echo "Response is correct: $response"
+        else
+          echo "Response is not as expected: $response"
+          exit 1
+        fi
